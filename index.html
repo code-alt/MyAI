@@ -1,0 +1,174 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+        <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <style>#promptArea {
+            color: #1d1d1d;
+            color: var(--form-text);
+            background-color: #efefef;
+            background-color: var(--background);
+            font-family: inherit;
+            font-size: inherit;
+            margin-right: 6px;
+            margin-bottom: 6px;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            outline: none;
+          }
+          
+          @media (prefers-color-scheme: dark) {
+          
+            #promptArea {
+            background-color: #161f27;
+            background-color: var(--background);
+            }
+          }
+          
+          @media (prefers-color-scheme: dark) {
+          
+            #promptArea {
+            color: #fff;
+            color: var(--form-text);
+            }
+          }</style>
+        <title>AI Assistant</title>
+        <script src="/tts.js"></script>
+        <script type="text/javascript">var final_transcript = '';
+          var recognizing = false;
+          var ignore_onend;
+          var start_timestamp;
+          if (!('webkitSpeechRecognition' in window)) {
+            upgrade();
+          } else {
+            var recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+          
+            recognition.onstart = function() {
+              recognizing = true;
+            };
+          
+            recognition.onerror = function(event) {
+              if (event.error == 'no-speech') {
+                ignore_onend = true;
+              }
+              if (event.error == 'audio-capture') {
+                ignore_onend = true;
+              }
+              if (event.error == 'not-allowed') {
+                ignore_onend = true;
+              }
+            };
+          
+            recognition.onend = function() {
+              recognizing = false;
+              if (ignore_onend) {
+                return;
+              }
+              if (!final_transcript) {
+                return;
+              }
+            };
+            recognition.onresult = function(event) {
+              var interim_transcript = '';
+              for (var i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i][0].isFinal) {
+                  final_transcript += event.results[i][0].transcript;
+                  var thistranscript = event.results[i][0].transcript;
+                  document.getElementById("promptArea").innerHTML=thistranscript;
+                  submit();
+                  startButton();
+                } else {
+                  if (event.results[i][0].transcript == "cancel") {
+                      document.getElementById("promptArea").innerHTML="";
+                      TTS("Ok!", 'en-us');
+                  }
+                  interim_transcript += event.results[i][0].transcript;
+                }
+              }
+              final_transcript = capitalize(final_transcript);
+              final_span = linebreak(final_transcript);
+              interim_span = linebreak(interim_transcript);
+              if (final_transcript || interim_transcript) {
+                showButtons('inline-block');
+              }
+            };
+          }
+          
+          var two_line = /\n\n/g;
+          var one_line = /\n/g;
+          function linebreak(s) {
+            return s.replace(two_line, '<p></p>').replace(one_line, '<br>');
+          }
+          
+          var first_char = /\S/;
+          function capitalize(s) {
+            return s.replace(first_char, function(m) { return m.toUpperCase(); });
+          }
+          
+          function startButton(event) {
+            if (recognizing) {
+              recognition.stop();
+              return;
+            }
+            final_transcript = '';
+            recognition.start();
+            ignore_onend = false;
+            final_span.innerHTML = '';
+            interim_span.innerHTML = '';
+            start_timestamp = event.timeStamp;
+          }</script>
+    </head>
+    <body>
+        <h1 style="text-align: center;font-size: 4em;">AI Assistant</h1><br><div style="text-align:center;"><input id="key" style="width: 100%;" placeholder="OpenAI API key (If you have it, not required)"/></div><br>
+        <div style="text-align: center;"><h3 style="font-size: 1.5em;font-weight: 300;display:inline-block;">Enter your prompt below or</h3>&nbsp;&nbsp;<button onclick="startButton()">Use Voice</button></div>
+        <textarea style="height: 15%;overflow-y: auto;" id="promptArea" placeholder='Enter your prompt or click "Use Voice"'></textarea>
+        <br>
+        <textarea style="height: 15%;overflow-y: auto;" id="result" placeholder="The bot's response goes here..."></textarea>
+        <br>
+        <div style="text-align: center;">
+        <button onclick="submit()">Submit</button>
+        <button onclick="TTS(document.getElementById('result').value.toString(), 'en-us');" id="read">Read</button><button onclick="TTS('', 'en-us')">Cancel Reading</button>
+        </div>
+        
+        <script type="text/javascript">
+            function submit() {
+              if (document.getElementById("promptArea").value == "") {
+                return Swal.fire({
+                  title: "Whoops!",
+                  text: "A prompt is required.",
+                  icon: "error",
+                  timer: 2000,
+                  timerProgressBar: true,
+                  showConfirmButton: false,
+                });
+              } else {
+                if (document.getElementById("key").value !== "") {
+                  fetch(
+                    "/getres?key=" +
+                      document.getElementById("key").value +
+                      "&prompt=" +
+                      document.getElementById("promptArea").value
+                  )
+                    .then((response) => response.text())
+                    .then((data) => {
+                      document.getElementById("bot").value = data;
+                    });
+                } else {
+                  fetch(
+                    "/getres?key=auto&prompt=" +
+                      document.getElementById("promptArea").value
+                  )
+                    .then(response => response.text())
+                    .then((data) => {
+                        document.getElementById("result").value = data;
+                      document.getElementById("read").click();
+                    });
+                }
+              }
+            }
+            </script>
+    </body>
+</html>
