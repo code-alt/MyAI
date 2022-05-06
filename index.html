@@ -35,16 +35,32 @@
           }</style>
         <title>AI Assistant</title>
         <script src="/tts.js"></script>
+    </head>
+    <body>
+        <h1 style="text-align: center;font-size: 4em;">AI Assistant</h1><br><div style="text-align:center;"><input id="key" style="width: 100%;" placeholder="OpenAI API key (If you have it, not required)"/></div><br>
+        <div style="text-align: center;"><h3 style="font-size: 1.5em;font-weight: 300;display:inline-block;">Enter your prompt below or</h3>&nbsp;&nbsp;<button onclick="startButton()">Use Voice</button></div>
+        <textarea style="height: 15%;overflow-y: auto;" id="promptArea" placeholder='Enter your prompt or click "Use Voice"'></textarea>
+        <br>
+        <textarea style="height: 15%;overflow-y: auto;" id="result" placeholder="The bot's response goes here..."></textarea>
+        <br>
+        <div style="text-align: center;">
+        <button onclick="submit()">Submit</button>
+        <button onclick="if (readDisabled==false){TTS(document.getElementById('result').value.toString(), 'en-us');}" id="read">Read</button><button onclick="TTS('', 'en-us')">Cancel Reading</button><button onclick="document.getElementById('result').value='';document.getElementById('promptArea').value='';">Clear</button>
+        <br>
+        <h4>Made by <a href="https://altdevs.xyz">Code-Alt</a> and <a href="https://openai.com">OpenAI</a></h4>
+        </div>
         <script type="text/javascript">var final_transcript = '';
           var recognizing = false;
+          var timed = 0;
           var ignore_onend;
           var start_timestamp;
+          var readDisabled = false;
           if (!('webkitSpeechRecognition' in window)) {
             upgrade();
           } else {
             var recognition = new webkitSpeechRecognition();
             recognition.continuous = false;
-            recognition.interimResults = true;
+            recognition.interimResults = false;
           
             recognition.onstart = function() {
               recognizing = true;
@@ -64,6 +80,8 @@
           
             recognition.onend = function() {
               recognizing = false;
+              submit();
+              return readDisabled=false;
               if (ignore_onend) {
                 return;
               }
@@ -74,38 +92,14 @@
             recognition.onresult = function(event) {
               var interim_transcript = '';
               for (var i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i][0].isFinal) {
-                  final_transcript += event.results[i][0].transcript;
-                  var thistranscript = event.results[i][0].transcript;
-                  document.getElementById("promptArea").innerHTML=thistranscript;
-                  submit();
-                  startButton();
-                } else {
-                  if (event.results[i][0].transcript == "cancel") {
-                      document.getElementById("promptArea").innerHTML="";
-                      TTS("Ok!", 'en-us');
-                  }
-                  interim_transcript += event.results[i][0].transcript;
-                }
+                var thistranscript = event.results[i][0].transcript;
+                  document.getElementById("promptArea").value=thistranscript;
+                    TTS('', 'en-us');
+                    window.setTimeout(()=>{
+                      recognition.stop();
+                    },5000);
               }
-              final_transcript = capitalize(final_transcript);
-              final_span = linebreak(final_transcript);
-              interim_span = linebreak(interim_transcript);
-              if (final_transcript || interim_transcript) {
-                showButtons('inline-block');
-              }
-            };
-          }
-          
-          var two_line = /\n\n/g;
-          var one_line = /\n/g;
-          function linebreak(s) {
-            return s.replace(two_line, '<p></p>').replace(one_line, '<br>');
-          }
-          
-          var first_char = /\S/;
-          function capitalize(s) {
-            return s.replace(first_char, function(m) { return m.toUpperCase(); });
+            }
           }
           
           function startButton(event) {
@@ -116,26 +110,8 @@
             final_transcript = '';
             recognition.start();
             ignore_onend = false;
-            final_span.innerHTML = '';
-            interim_span.innerHTML = '';
             start_timestamp = event.timeStamp;
-          }</script>
-    </head>
-    <body>
-        <h1 style="text-align: center;font-size: 4em;">AI Assistant</h1><br><div style="text-align:center;"><input id="key" style="width: 100%;" placeholder="OpenAI API key (If you have it, not required)"/></div><br>
-        <div style="text-align: center;"><h3 style="font-size: 1.5em;font-weight: 300;display:inline-block;">Enter your prompt below or</h3>&nbsp;&nbsp;<button onclick="startButton()">Use Voice</button></div>
-        <textarea style="height: 15%;overflow-y: auto;" id="promptArea" placeholder='Enter your prompt or click "Use Voice"'></textarea>
-        <br>
-        <textarea style="height: 15%;overflow-y: auto;" id="result" placeholder="The bot's response goes here..."></textarea>
-        <br>
-        <div style="text-align: center;">
-        <button onclick="submit()">Submit</button>
-        <button onclick="TTS(document.getElementById('result').value.toString(), 'en-us');" id="read">Read</button><button onclick="TTS('', 'en-us')">Cancel Reading</button>
-        <br>
-        <h4>Made by <a href="https://altdevs.xyz">Code-Alt</a> and <a href="https://openai.com">OpenAI</a></h4>
-        </div>
-        
-        <script type="text/javascript">
+          }
             function submit() {
               if (document.getElementById("promptArea").value == "") {
                 return Swal.fire({
@@ -157,6 +133,8 @@
                     .then((response) => response.text())
                     .then((data) => {
                       document.getElementById("bot").value = data;
+                      readDisabled = false;
+                      document.getElementById("read").click();
                     });
                 } else {
                   fetch(
@@ -166,6 +144,7 @@
                     .then(response => response.text())
                     .then((data) => {
                         document.getElementById("result").value = data;
+                        readDisabled = false;
                       document.getElementById("read").click();
                     });
                 }
