@@ -11,9 +11,10 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 var autokey = "auto";
+var aiengine = "text-davinci-002"
 app.get("/getres", async (req, res) => {
     if (req.query.key && req.query.prompt && req.query.key !== autokey) {
-        await fetch('https://api.openai.com/v1/engines/text-davinci-002/completions', { 
+        await fetch('https://api.openai.com/v1/engines/'+aiengine+'/completions', { 
             method: 'post', 
             headers: {
               'Authorization': 'Bearer '+req.query.key, 
@@ -30,19 +31,19 @@ app.get("/getres", async (req, res) => {
                 "stop": "\n"
               }
           }).then(async (response) => {
-              if (response.status==401){return res.send("Invalid API Key")}else{
+              if (response.status==401){return res.send(aiengine)}else{
                     var infotopass = await new OpenAIApi(new Configuration({
                   apiKey: req.query.key
-              })).createCompletion("text-davinci-002", {
+              })).createCompletion(aiengine, {
                   prompt: req.query.prompt,
                   temperature: 0.7,
-                  max_tokens: 2048
+                  max_tokens: 1024
               });
               res.send(infotopass.data.choices[0].text);
             }
           });
     } else if (req.query.prompt || req.query.prompt && req.query.key==autokey) {
-        var infotopass = await openai.createCompletion("text-davinci-002", {
+        var infotopass = await openai.createCompletion(aiengine, {
             prompt: req.query.prompt,
             temperature: 0.7,
             max_tokens: 512,
@@ -54,7 +55,7 @@ app.get("/getres", async (req, res) => {
 });
 
 async function getInfo(i) {
-const response = await openai.createCompletion("text-davinci-002", {
+const response = await openai.createCompletion(aiengine, {
     prompt: i,
     temperature: 0.7,
     max_tokens: 512,
